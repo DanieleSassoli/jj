@@ -112,6 +112,38 @@ $ jj edit xcv  # position on the stack to edit
 $ jj gerrit upload -r xcv
 ```
 
+## Fetching a change from Gerrit
+
+To review or continue someone else's change, fetch it by its Gerrit change
+number:
+
+```shell
+# Fetch the latest patchset of change 1234
+$ jj gerrit fetch 1234
+
+# Or pick a specific patchset
+$ jj gerrit fetch 1234 --patchset 2
+```
+
+The change is stored under the `changes` pseudo-remote, so change 1234 shows up
+in the log as the remote bookmark `1234@changes`:
+
+```shell
+$ jj new 1234@changes    # stack a new change on top of it
+$ jj edit 1234@changes   # or amend the change itself
+```
+
+Note that `jj git fetch` will not update these refs; re-run `jj gerrit fetch` to
+pick up newer patchsets.
+
+Fetched changes are untracked remote bookmarks, which are immutable by default.
+To amend one in place with `jj edit`, exclude them from `immutable_heads()`:
+
+```toml
+[revset-aliases]
+'immutable_heads()' = 'builtin_immutable_heads() ~ remote_bookmarks(remote=exact:"changes")'
+```
+
 ## `Change-Id` management
 
 If you do not provide an explicit `Change-Id` footer in your commits,

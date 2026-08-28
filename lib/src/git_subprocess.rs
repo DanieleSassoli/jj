@@ -246,6 +246,24 @@ impl GitSubprocessContext {
         Ok(maybe_branch.map(Into::into))
     }
 
+    /// List fully-qualified ref names on the remote matching `patterns`
+    ///
+    /// `git ls-remote --refs <remote> <patterns...>`
+    pub(crate) fn spawn_ls_remote(
+        &self,
+        remote_name: &RemoteName,
+        patterns: &[String],
+    ) -> Result<Vec<String>, GitSubprocessError> {
+        let mut command = self.create_command();
+        command.stdout(Stdio::piped());
+        command.args(["ls-remote", "--refs", "--", remote_name.as_str()]);
+        command.args(patterns);
+        let output = wait_with_output(self.spawn_cmd(command)?)?;
+
+        let output = parse_git_ls_remote_output(output)?;
+        parse_git_ls_remote_refs(&output.stdout)
+    }
+
     /// Push references to git
     ///
     /// All pushes are forced, using --force-with-lease to perform a test&set
@@ -528,6 +546,35 @@ fn parse_git_remote_show_output(output: Output) -> Result<Output, GitSubprocessE
     }
 
     Err(external_git_error(&output.stderr))
+}
+
+fn parse_git_ls_remote_output(output: Output) -> Result<Output, GitSubprocessError> {
+    if output.status.success() {
+        return Ok(output);
+    }
+
+    if let Some(option) = parse_unknown_option(&output.stderr) {
+        return Err(GitSubprocessError::UnsupportedGitOption(option));
+    }
+
+    if let Some(remote) = parse_no_such_remote(&output.stderr) {
+        return Err(GitSubprocessError::NoSuchRepository(remote));
+    }
+
+    Err(external_git_error(&output.stderr))
+}
+
+/// Extracts the ref names from `<oid>\t<ref>` lines.
+fn parse_git_ls_remote_refs(stdout: &[u8]) -> Result<Vec<String>, GitSubprocessError> {
+    stdout
+        .lines()
+        .filter_map(|line| line.split_str("\t").nth(1))
+        .map(|name| {
+            name.to_str().map(|s| s.to_owned()).map_err(|e| {
+                GitSubprocessError::External(format!("git ls-remote output is not utf-8: {e:?}"))
+            })
+        })
+        .collect()
 }
 
 fn parse_git_remote_show_default_branch(

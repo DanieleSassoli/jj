@@ -22,8 +22,12 @@ use crate::commands::gerrit;
 use crate::ui::Ui;
 
 /// Interact with Gerrit Code Review.
+// `clap` requires each variant's payload to implement `Args`, which `Box` does
+// not, so the size difference between the variants can't be avoided.
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand, Clone, Debug)]
 pub enum GerritCommand {
+    Fetch(gerrit::fetch::FetchArgs),
     Upload(gerrit::upload::UploadArgs),
 }
 
@@ -33,10 +37,12 @@ pub async fn cmd_gerrit(
     subcommand: &GerritCommand,
 ) -> Result<(), CommandError> {
     match subcommand {
+        GerritCommand::Fetch(fetch) => gerrit::fetch::cmd_gerrit_fetch(ui, command, fetch).await,
         GerritCommand::Upload(review) => {
             gerrit::upload::cmd_gerrit_upload(ui, command, review).await
         }
     }
 }
 
+mod fetch;
 mod upload;

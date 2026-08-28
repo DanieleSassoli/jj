@@ -28,6 +28,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   adding a `Change-Id` footer. Commits that already have a `Change-Id` or `Link`
   footer are unaffected.
 
+* New `jj gerrit fetch <number>` command to fetch a change from Gerrit. The
+  latest patchset is selected by default, or pick one with `--patchset`. The
+  change is stored under the `changes` pseudo-remote, so change 1234 becomes the
+  remote bookmark `1234@changes`.
+
 ### Fixed bugs
 
 * The default pager flags now include `-K` (`--quit-on-intr`), so pressing

@@ -901,8 +901,14 @@ fn test_gerrit_upload_no_change_id() {
 
     // With --no-change-id, b should be pushed without a footer being added,
     // and c should keep its existing Change-Id unchanged.
-    let output =
-        local_dir.run_jj(["gerrit", "upload", "-r", "c", "--remote-branch=main", "--no-change-id"]);
+    let output = local_dir.run_jj([
+        "gerrit",
+        "upload",
+        "-r",
+        "c",
+        "--remote-branch=main",
+        "--no-change-id",
+    ]);
     insta::assert_snapshot!(output, @"
     ------- stderr -------
     Found 1 heads to push to Gerrit (remote 'origin'), target branch 'main'

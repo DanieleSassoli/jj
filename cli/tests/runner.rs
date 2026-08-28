@@ -41,6 +41,7 @@ mod test_file_track_untrack_commands;
 mod test_fileset_output;
 mod test_fix_command;
 mod test_generate_md_cli_help;
+mod test_gerrit_fetch;
 mod test_gerrit_upload;
 mod test_git_clone;
 mod test_git_colocated;

@@ -231,7 +231,6 @@ pub struct UploadArgs {
     /// regardless of this flag.
     #[arg(long)]
     no_change_id: bool,
-
     // Note: An option "message" exists on Gerrit hosts. It is currently not
     // implemented because it could be easy to confuse a "-m"/"--message" flag
     // for a patchset with a message for a commit description.
@@ -256,7 +255,7 @@ pub enum EmailNotification {
     All,
 }
 
-fn calculate_push_remote(
+pub(crate) fn calculate_push_remote(
     store: &Arc<Store>,
     settings: &UserSettings,
     remote: Option<&str>,

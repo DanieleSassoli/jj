@@ -53,6 +53,7 @@ This document contains the help content for the `jj` command-line program.
 * [`jj file untrack`↴](#jj-file-untrack)
 * [`jj fix`↴](#jj-fix)
 * [`jj gerrit`↴](#jj-gerrit)
+* [`jj gerrit fetch`↴](#jj-gerrit-fetch)
 * [`jj gerrit upload`↴](#jj-gerrit-upload)
 * [`jj git`↴](#jj-git)
 * [`jj git clone`↴](#jj-git-clone)
@@ -1461,7 +1462,33 @@ Interact with Gerrit Code Review
 
 ###### **Subcommands:**
 
+* `fetch` — Fetch a change from Gerrit for review or further work
 * `upload` — Upload changes to Gerrit for code review, or update existing changes
+
+
+
+## `jj gerrit fetch`
+
+Fetch a change from Gerrit for review or further work
+
+The change is stored under the `changes` pseudo-remote, so change 1234 becomes the remote bookmark `1234@changes`.
+
+Fetched changes are untracked remote bookmarks, which are immutable by default. To amend a change in place, exclude them from `immutable_heads()`.
+
+**Usage:** `jj gerrit fetch [OPTIONS] <CHANGE>`
+
+###### **Arguments:**
+
+* `<CHANGE>` — The Gerrit change number, as shown in the Gerrit UI
+
+###### **Options:**
+
+* `-p`, `--patchset <PATCHSET>` — The patchset to fetch
+
+   Defaults to the latest patchset of the change.
+* `--remote <REMOTE>` — The Gerrit remote to fetch from
+
+   Can be configured with the `gerrit.default-remote` repository option as well.
 
 
 
@@ -1544,6 +1571,9 @@ Note: this command takes 1-or-more revsets arguments, each of which can resolve 
 * `--trace <TRACE>` — For debugging Gerrit
 
    See https://gerrit-review.googlesource.com/Documentation/user-upload.html#trace
+* `--no-change-id` — Do not add a `Change-Id` footer to commits that lack one
+
+   By default, a `Change-Id` footer is automatically derived from the jj change ID and appended to commits that do not already have one. This flag disables that behaviour, leaving such commits unchanged. Commits that already contain a `Change-Id` or `Link` footer are never modified, regardless of this flag.
 
 
 

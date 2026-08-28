@@ -2703,6 +2703,8 @@ pub enum GitFetchError {
     RemoteName(#[from] GitRemoteNameError),
     #[error("Failed to update refs: {}", .0.iter().map(|n| n.as_symbol()).join(", "))]
     RejectedUpdates(Vec<GitRefNameBuf>),
+    #[error("No such ref on the remote: {0}")]
+    NoRemoteRef(String),
     #[error(transparent)]
     Subprocess(#[from] GitSubprocessError),
 }
@@ -3146,6 +3148,60 @@ impl<'a> GitFetch<'a> {
             bookmark_matcher: expr.bookmark.to_matcher(),
             tag_matcher: expr.tag.to_matcher(),
         });
+        Ok(())
+    }
+
+    /// Lists fully-qualified ref names on the remote matching `patterns`.
+    ///
+    /// Unlike [`Self::fetch`], the patterns are passed to `git ls-remote`
+    /// verbatim, so refs outside `refs/heads/` and `refs/tags/` can be
+    /// discovered.
+    pub fn ls_remote(
+        &self,
+        remote_name: &RemoteName,
+        patterns: &[String],
+    ) -> Result<Vec<String>, GitFetchError> {
+        validate_remote_name(remote_name)?;
+        if try_find_active_remote_inner(&self.git_repo, remote_name).is_none() {
+            return Err(GitFetchError::NoSuchRemote(remote_name.to_owned()));
+        }
+        Ok(self.git_ctx.spawn_ls_remote(remote_name, patterns)?)
+    }
+
+    /// Fetches fully-qualified `(source, destination)` ref pairs verbatim.
+    ///
+    /// This bypasses the bookmark/tag refspec expansion done by
+    /// [`Self::fetch`], allowing refs such as Gerrit's `refs/changes/*` to be
+    /// fetched. The fetched refs are not registered for [`Self::import_refs`];
+    /// callers should run [`import_refs`] to pick them up.
+    pub fn fetch_qualified_refs(
+        &mut self,
+        remote_name: &RemoteName,
+        refspecs: &[(String, String)],
+        callback: &mut dyn GitSubprocessCallback,
+    ) -> Result<(), GitFetchError> {
+        validate_remote_name(remote_name)?;
+        if try_find_active_remote_inner(&self.git_repo, remote_name).is_none() {
+            return Err(GitFetchError::NoSuchRemote(remote_name.to_owned()));
+        }
+
+        let refspecs: Vec<RefSpec> = refspecs
+            .iter()
+            .map(|(source, destination)| RefSpec::forced(source.clone(), destination.clone()))
+            .collect();
+        let updates = match self
+            .git_ctx
+            .spawn_fetch(remote_name, &refspecs, &[], callback, None)?
+        {
+            GitFetchStatus::Updates(updates) => updates,
+            GitFetchStatus::NoRemoteRef(refspec) => {
+                return Err(GitFetchError::NoRemoteRef(refspec));
+            }
+        };
+        if !updates.rejected.is_empty() {
+            let names = updates.rejected.into_iter().map(|(name, _)| name).collect();
+            return Err(GitFetchError::RejectedUpdates(names));
+        }
         Ok(())
     }
 
